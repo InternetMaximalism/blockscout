@@ -323,11 +323,6 @@
               <%= gettext "Value" %>
             </dt>
             <dd class="col-sm-9 col-lg-10"> <%= value(@transaction) %>
-            <%= if !empty_exchange_rate?(@exchange_rate) do %>
-              (<span data-wei-value=<%= @transaction.value.value %>
-                data-usd-exchange-rate=<%= @exchange_rate.usd_value %>>
-              </span>)
-            <% end %>
             </dd>
           </dl>
           <!-- Transaction Fee -->
@@ -339,10 +334,6 @@
             </dt>
             <dd class="col-sm-9 col-lg-10">
               <%= formatted_fee(@transaction, denomination: :ether) %>
-
-              <%= if !empty_exchange_rate?(@exchange_rate) do %>
-                (<span data-wei-value=<%= fee(@transaction) %> data-usd-exchange-rate=<%= @exchange_rate.usd_value %>></span>)
-              <% end %>
             </dd>
           </dl>
           <!-- Gas Price -->
