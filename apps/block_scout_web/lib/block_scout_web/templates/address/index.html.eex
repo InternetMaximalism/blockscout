@@ -28,7 +28,7 @@
 			Balance
 			</div>
 	      </th>
-		   <%= if (gettext "Ether") != "SAT" do %>
+		   <%= if (gettext "Ether") != "ESAT" do %>
 		    <%= if balance_percentage_enabled?(@total_supply) do %>
 			  <th class="stakes-table-th">
 				<div class="stakes-table-th-content">

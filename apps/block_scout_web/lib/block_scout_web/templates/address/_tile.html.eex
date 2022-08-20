@@ -18,7 +18,7 @@
       <% end %>
     </span>
   </td>
-  <%= if (gettext "Ether") != "SAT" do %>
+  <%= if (gettext "Ether") != "ESAT" do %>
     <%= if balance_percentage_enabled?(@total_supply) do %>
       <td class="stakes-td color-lighten">
         <!-- percentage of coins from total supply -->
