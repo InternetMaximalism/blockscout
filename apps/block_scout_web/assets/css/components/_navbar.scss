@@ -236,7 +236,9 @@ $navbar-logo-width: 100% !default;
   margin-left: 0;
   flex-shrink: 1;
   display: inline-flex;
-  width: 30px; // custom
+  // width: 30px; // custom
+  // height: 30px;
+
   .navbar-logo {
     max-width: 100%;
   }
