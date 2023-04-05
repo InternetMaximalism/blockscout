@@ -24,10 +24,10 @@ defmodule BlockScoutWeb.API.RPC.AddressControllerTest do
     start_supervised!({CoinBalanceOnDemand, [mocked_json_rpc_named_arguments, [name: CoinBalanceOnDemand]]})
     start_supervised!(AddressesCounter)
 
-    Application.put_env(:explorer, AverageBlockTime, enabled: true)
+    Application.put_env(:explorer, AverageBlockTime, enabled: true, cache_period: 1_800_000)
 
     on_exit(fn ->
-      Application.put_env(:explorer, AverageBlockTime, enabled: false)
+      Application.put_env(:explorer, AverageBlockTime, enabled: false, cache_period: 1_800_000)
     end)
 
     :ok
@@ -102,8 +102,8 @@ defmodule BlockScoutWeb.API.RPC.AddressControllerTest do
       first_address_hash = to_string(first_address.hash)
       second_address_hash = to_string(second_address.hash)
 
-      first_address_inserted_at = to_string(first_address.inserted_at)
-      second_address_inserted_at = to_string(second_address.inserted_at)
+      _first_address_inserted_at = to_string(first_address.inserted_at)
+      _second_address_inserted_at = to_string(second_address.inserted_at)
 
       response =
         conn
@@ -2221,7 +2221,7 @@ defmodule BlockScoutWeb.API.RPC.AddressControllerTest do
       token_transfer =
         insert(:token_transfer, %{
           token_contract_address: token_address,
-          token_id: 666,
+          token_ids: [666],
           transaction: transaction,
           block: transaction.block,
           block_number: transaction.block_number
@@ -2241,7 +2241,7 @@ defmodule BlockScoutWeb.API.RPC.AddressControllerTest do
                |> get("/api", params)
                |> json_response(200)
 
-      assert result["tokenID"] == to_string(token_transfer.token_id)
+      assert result["tokenID"] == to_string(List.first(token_transfer.token_ids))
       assert response["status"] == "1"
       assert response["message"] == "OK"
       assert :ok = ExJsonSchema.Validator.validate(tokentx_schema(), response)

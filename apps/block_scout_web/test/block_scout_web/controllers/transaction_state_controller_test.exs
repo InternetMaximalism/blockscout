@@ -4,10 +4,9 @@ defmodule BlockScoutWeb.TransactionStateControllerTest do
   import Mox
 
   import BlockScoutWeb.WebRouter.Helpers, only: [transaction_state_path: 3]
-  import BlockScoutWeb.WeiHelpers, only: [format_wei_value: 2]
+  import BlockScoutWeb.WeiHelper, only: [format_wei_value: 2]
   import EthereumJSONRPC, only: [integer_to_quantity: 1]
   alias Explorer.Chain.Wei
-  alias EthereumJSONRPC.Blocks
 
   describe "GET index/3" do
     test "loads existing transaction", %{conn: conn} do
@@ -32,7 +31,7 @@ defmodule BlockScoutWeb.TransactionStateControllerTest do
 
     test "with duplicated from, to or miner fields", %{conn: conn} do
       address = insert(:address)
-
+      to_address = insert(:address)
       insert(:block)
       block = insert(:block, miner: address)
 
@@ -42,12 +41,48 @@ defmodule BlockScoutWeb.TransactionStateControllerTest do
         block_number: block.number - 1
       )
 
-      transaction = insert(:transaction, from_address: address, to_address: address) |> with_block(block, status: :ok)
+      insert(:fetched_balance,
+        address_hash: to_address.hash,
+        value: 1_000_000,
+        block_number: block.number - 1
+      )
+
+      transaction =
+        insert(:transaction, from_address: address, to_address: to_address) |> with_block(block, status: :ok)
 
       conn = get(conn, transaction_state_path(conn, :index, transaction), %{type: "JSON"})
       {:ok, %{"items" => items}} = conn.resp_body |> Poison.decode()
 
-      assert(items |> Enum.filter(fn item -> item != nil end) |> length() == 1)
+      assert(items |> Enum.filter(fn item -> item != nil end) |> length() == 2)
+    end
+
+    test "returns state changes for the transaction with contract creation", %{conn: conn} do
+      block = insert(:block)
+
+      contract_address = insert(:contract_address)
+
+      transaction =
+        :transaction
+        |> insert(to_address: nil)
+        |> with_contract_creation(contract_address)
+        |> with_block(insert(:block))
+
+      insert(:fetched_balance,
+        address_hash: transaction.from_address_hash,
+        value: 1_000_000,
+        block_number: block.number
+      )
+
+      insert(:fetched_balance,
+        address_hash: transaction.block.miner_hash,
+        value: 1_000_000,
+        block_number: block.number
+      )
+
+      conn = get(conn, transaction_state_path(conn, :index, transaction), %{type: "JSON"})
+      {:ok, %{"items" => items}} = conn.resp_body |> Poison.decode()
+
+      assert(items |> Enum.filter(fn item -> item != nil end) |> length() == 2)
     end
 
     test "returns fetched state changes for the transaction with token transfer", %{conn: conn} do
@@ -126,7 +161,7 @@ defmodule BlockScoutWeb.TransactionStateControllerTest do
         [%{id: id, method: "eth_getBalance", params: _}], _options ->
           {:ok, [%{id: id, result: integer_to_quantity(123)}]}
 
-        [%{id: id, method: "eth_getBlockByNumber", params: _}], _options ->
+        [%{id: _id, method: "eth_getBlockByNumber", params: _}], _options ->
           {:ok,
            [
              %{

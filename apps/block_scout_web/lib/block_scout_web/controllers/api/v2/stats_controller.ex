@@ -12,6 +12,8 @@ defmodule BlockScoutWeb.API.V2.StatsController do
   alias Explorer.ExchangeRates.Token
   alias Timex.Duration
 
+  @api_true [api?: true]
+
   def stats(conn, _params) do
     market_cap_type =
       case Application.get_env(:explorer, :supply) do
@@ -41,7 +43,7 @@ defmodule BlockScoutWeb.API.V2.StatsController do
       conn,
       %{
         "total_blocks" => BlockCache.estimated_count() |> to_string(),
-        "total_addresses" => Chain.address_estimated_count() |> to_string(),
+        "total_addresses" => @api_true |> Chain.address_estimated_count() |> to_string(),
         "total_transactions" => TransactionCache.estimated_count() |> to_string(),
         "average_block_time" => AverageBlockTime.average_block_time() |> Duration.to_milliseconds(),
         "coin_price" => exchange_rate.usd_value,
@@ -50,9 +52,21 @@ defmodule BlockScoutWeb.API.V2.StatsController do
         "gas_used_today" => Enum.at(transaction_stats, 0).gas_used,
         "gas_prices" => gas_prices,
         "static_gas_price" => gas_price,
-        "market_cap" => Helper.market_cap(market_cap_type, exchange_rate)
+        "market_cap" => Helper.market_cap(market_cap_type, exchange_rate),
+        "network_utilization_percentage" => network_utilization_percentage()
       }
     )
+  end
+
+  defp network_utilization_percentage do
+    {gas_used, gas_limit} =
+      Enum.reduce(Chain.list_blocks(), {Decimal.new(0), Decimal.new(0)}, fn block, {gas_used, gas_limit} ->
+        {Decimal.add(gas_used, block.gas_used), Decimal.add(gas_limit, block.gas_limit)}
+      end)
+
+    if Decimal.compare(gas_limit, 0) == :eq,
+      do: 0,
+      else: gas_used |> Decimal.div(gas_limit) |> Decimal.mult(100) |> Decimal.to_float()
   end
 
   def transactions_chart(conn, _params) do
@@ -63,7 +77,7 @@ defmodule BlockScoutWeb.API.V2.StatsController do
     latest = Date.add(today, -1)
     earliest = Date.add(latest, -1 * history_size)
 
-    date_range = TransactionStats.by_date_range(earliest, latest)
+    date_range = TransactionStats.by_date_range(earliest, latest, @api_true)
 
     transaction_history_data =
       date_range

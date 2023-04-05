@@ -4,7 +4,7 @@ defmodule BlockScoutWeb.API.V2.BlockController do
   import BlockScoutWeb.Chain,
     only: [next_page_params: 3, paging_options: 1, put_key_value_to_paging_options: 3, split_list_by_page: 1]
 
-  import BlockScoutWeb.PagingHelper, only: [select_block_type: 1]
+  import BlockScoutWeb.PagingHelper, only: [delete_parameters_from_next_page_params: 1, select_block_type: 1]
 
   alias BlockScoutWeb.API.V2.TransactionView
   alias BlockScoutWeb.BlockTransactionController
@@ -22,18 +22,21 @@ defmodule BlockScoutWeb.API.V2.BlockController do
     }
   ]
 
+  @api_true [api?: true]
+
   action_fallback(BlockScoutWeb.API.V2.FallbackController)
 
   def block(conn, %{"block_hash_or_number" => block_hash_or_number}) do
     with {:ok, block} <-
            BlockTransactionController.param_block_hash_or_number_to_block(block_hash_or_number,
              necessity_by_association: %{
-               [miner: :names] => :required,
+               [miner: :names] => :optional,
                :uncles => :optional,
                :nephews => :optional,
                :rewards => :optional,
                :transactions => :optional
-             }
+             },
+             api?: true
            ) do
       conn
       |> put_status(200)
@@ -47,11 +50,12 @@ defmodule BlockScoutWeb.API.V2.BlockController do
     blocks_plus_one =
       full_options
       |> Keyword.merge(paging_options(params))
+      |> Keyword.merge(@api_true)
       |> Chain.list_blocks()
 
     {blocks, next_page} = split_list_by_page(blocks_plus_one)
 
-    next_page_params = next_page_params(next_page, blocks, params)
+    next_page_params = next_page |> next_page_params(blocks, params) |> delete_parameters_from_next_page_params()
 
     conn
     |> put_status(200)
@@ -61,16 +65,18 @@ defmodule BlockScoutWeb.API.V2.BlockController do
   def transactions(conn, %{"block_hash_or_number" => block_hash_or_number} = params) do
     with {:ok, block} <- BlockTransactionController.param_block_hash_or_number_to_block(block_hash_or_number, []) do
       full_options =
-        Keyword.merge(
-          @transaction_necessity_by_association,
-          put_key_value_to_paging_options(paging_options(params), :is_index_in_asc_order, true)
-        )
+        @transaction_necessity_by_association
+        |> Keyword.merge(put_key_value_to_paging_options(paging_options(params), :is_index_in_asc_order, true))
+        |> Keyword.merge(@api_true)
 
       transactions_plus_one = Chain.block_to_transactions(block.hash, full_options, false)
 
       {transactions, next_page} = split_list_by_page(transactions_plus_one)
 
-      next_page_params = next_page_params(next_page, transactions, params)
+      next_page_params =
+        next_page
+        |> next_page_params(transactions, params)
+        |> delete_parameters_from_next_page_params()
 
       conn
       |> put_status(200)

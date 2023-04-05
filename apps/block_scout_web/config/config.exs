@@ -5,42 +5,18 @@
 # is restricted to this project.
 import Config
 
-network_path =
-  "NETWORK_PATH"
-  |> System.get_env("/")
-  |> (&(if !String.ends_with?(&1, "/") do
-          &1 <> "/"
-        else
-          &1
-        end)).()
-
-api_path =
-  "API_PATH"
-  |> System.get_env("/")
-  |> (&(if !String.ends_with?(&1, "/") do
-          &1 <> "/"
-        else
-          &1
-        end)).()
-
 # General application configuration
 config :block_scout_web,
   namespace: BlockScoutWeb,
-  ecto_repos: [Explorer.Repo, Explorer.Repo.Account]
+  ecto_repos: [Explorer.Repo, Explorer.Repo.Account],
+  cookie_domain: System.get_env("SESSION_COOKIE_DOMAIN")
 
 config :block_scout_web,
   admin_panel_enabled: System.get_env("ADMIN_PANEL_ENABLED", "") == "true"
 
 config :block_scout_web, BlockScoutWeb.Counters.BlocksIndexedCounter, enabled: true
 
-# Configures the endpoint
-config :block_scout_web, BlockScoutWeb.Endpoint,
-  url: [
-    path: network_path,
-    api_path: api_path
-  ],
-  render_errors: [view: BlockScoutWeb.ErrorView, accepts: ~w(html json)],
-  pubsub_server: BlockScoutWeb.PubSub
+config :block_scout_web, BlockScoutWeb.Counters.InternalTransactionsIndexedCounter, enabled: true
 
 config :block_scout_web, BlockScoutWeb.Tracer,
   service: :block_scout_web,
@@ -72,6 +48,22 @@ config :logger, :block_scout_web,
        block_number step count error_count shrunk import_id transaction_id)a,
   metadata_filter: [application: :block_scout_web]
 
+config :logger, :api,
+  # keep synced with `config/config.exs`
+  format: "$dateT$time $metadata[$level] $message\n",
+  metadata:
+    ~w(application fetcher request_id first_block_number last_block_number missing_block_range_count missing_block_count
+       block_number step count error_count shrunk import_id transaction_id)a,
+  metadata_filter: [application: :api]
+
+config :logger, :api_v2,
+  # keep synced with `config/config.exs`
+  format: "$dateT$time $metadata[$level] $message\n",
+  metadata:
+    ~w(application fetcher request_id first_block_number last_block_number missing_block_range_count missing_block_count
+       block_number step count error_count shrunk import_id transaction_id)a,
+  metadata_filter: [application: :api_v2]
+
 config :prometheus, BlockScoutWeb.Prometheus.Instrumenter,
   # override default for Phoenix 1.4 compatibility
   # * `:transport_name` to `:transport`
@@ -96,12 +88,16 @@ config :block_scout_web, BlockScoutWeb.ApiRouter,
 
 config :block_scout_web, BlockScoutWeb.WebRouter, enabled: System.get_env("DISABLE_WEBAPP") != "true"
 
+config :block_scout_web, BlockScoutWeb.CSPHeader,
+  mixpanel_url: System.get_env("MIXPANEL_URL", "https://api-js.mixpanel.com"),
+  amplitude_url: System.get_env("AMPLITUDE_URL", "https://api2.amplitude.com/2/httpapi")
+
 # Configures Ueberauth local settings
 config :ueberauth, Ueberauth,
   providers: [
     auth0: {
       Ueberauth.Strategy.Auth0,
-      [callback_path: "/auth/auth0/callback"]
+      [callback_path: "/auth/auth0/callback", callback_params: ["path"]]
     }
   ]
 

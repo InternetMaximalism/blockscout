@@ -14,6 +14,7 @@ defmodule BlockScoutWeb.WebRouter do
     plug(:protect_from_forgery)
     plug(BlockScoutWeb.CSPHeader)
     plug(BlockScoutWeb.ChecksumAddress)
+    plug(BlockScoutWeb.Plug.Logger, application: :block_scout_web)
   end
 
   pipeline :account do
@@ -24,6 +25,7 @@ defmodule BlockScoutWeb.WebRouter do
     plug(:protect_from_forgery)
     plug(BlockScoutWeb.CSPHeader)
     plug(BlockScoutWeb.ChecksumAddress)
+    plug(BlockScoutWeb.Plug.Logger, application: :block_scout_web)
   end
 
   if Mix.env() == :dev do
@@ -493,6 +495,8 @@ defmodule BlockScoutWeb.WebRouter do
     get("/chain-blocks", ChainController, :chain_blocks, as: :chain_blocks)
 
     get("/token-counters", Tokens.TokenController, :token_counters)
+
+    get("/visualize/sol2uml", VisualizeSol2umlController, :index)
 
     get("/*path", PageNotFoundController, :index)
   end

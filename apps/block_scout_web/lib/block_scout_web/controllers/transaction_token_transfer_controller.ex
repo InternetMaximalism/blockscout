@@ -6,7 +6,7 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
   import BlockScoutWeb.Models.GetAddressTags, only: [get_address_tags: 2]
   import BlockScoutWeb.Models.GetTransactionTags, only: [get_transaction_with_addresses_tags: 2]
 
-  alias BlockScoutWeb.{AccessHelpers, Controller, TransactionController, TransactionTokenTransferView}
+  alias BlockScoutWeb.{AccessHelper, Controller, TransactionController, TransactionTokenTransferView}
   alias Explorer.{Chain, Market}
   alias Explorer.ExchangeRates.Token
   alias Phoenix.View
@@ -22,8 +22,8 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
              transaction_hash,
              []
            ),
-         {:ok, false} <- AccessHelpers.restricted_access?(to_string(transaction.from_address_hash), params),
-         {:ok, false} <- AccessHelpers.restricted_access?(to_string(transaction.to_address_hash), params) do
+         {:ok, false} <- AccessHelper.restricted_access?(to_string(transaction.from_address_hash), params),
+         {:ok, false} <- AccessHelper.restricted_access?(to_string(transaction.to_address_hash), params) do
       full_options =
         Keyword.merge(
           [
@@ -33,8 +33,7 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
               [from_address: :names] => :optional,
               [to_address: :names] => :optional,
               from_address: :required,
-              to_address: :required,
-              token: :required
+              to_address: :required
             }
           ],
           paging_options(params)
@@ -77,7 +76,7 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
         TransactionController.set_not_found_view(conn, transaction_hash_string)
 
       :error ->
-        TransactionController.set_invalid_view(conn, transaction_hash_string)
+        unprocessable_entity(conn)
 
       {:error, :not_found} ->
         TransactionController.set_not_found_view(conn, transaction_hash_string)
@@ -101,8 +100,8 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
                :token_transfers => :optional
              }
            ),
-         {:ok, false} <- AccessHelpers.restricted_access?(to_string(transaction.from_address_hash), params),
-         {:ok, false} <- AccessHelpers.restricted_access?(to_string(transaction.to_address_hash), params) do
+         {:ok, false} <- AccessHelper.restricted_access?(to_string(transaction.from_address_hash), params),
+         {:ok, false} <- AccessHelper.restricted_access?(to_string(transaction.to_address_hash), params) do
       render(
         conn,
         "index.html",
@@ -125,7 +124,7 @@ defmodule BlockScoutWeb.TransactionTokenTransferController do
         TransactionController.set_not_found_view(conn, transaction_hash_string)
 
       :error ->
-        TransactionController.set_invalid_view(conn, transaction_hash_string)
+        unprocessable_entity(conn)
 
       {:error, :not_found} ->
         TransactionController.set_not_found_view(conn, transaction_hash_string)

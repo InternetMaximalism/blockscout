@@ -35,7 +35,7 @@ defmodule BlockScoutWeb.TransactionViewTest do
       assert pending.inserted_at == TransactionView.block_timestamp(pending)
     end
 
-    test "returns timestamp for block for collacted transaction" do
+    test "returns timestamp for block for collated transaction" do
       block = insert(:block)
 
       transaction =
@@ -192,7 +192,7 @@ defmodule BlockScoutWeb.TransactionViewTest do
         |> insert()
         |> with_block(block, status: :error)
 
-      insert(:pending_block_operation, block_hash: block.hash, fetch_internal_transactions: true)
+      insert(:pending_block_operation, block_hash: block.hash, block_number: block.number)
 
       status = TransactionView.transaction_status(transaction)
       assert TransactionView.formatted_result(status) == "Error: (Awaiting internal transactions for reason)"
@@ -276,9 +276,9 @@ defmodule BlockScoutWeb.TransactionViewTest do
 
       token = insert(:token)
 
-      token_transfer1 = insert(:token_transfer, transaction: transaction, token: token, token_id: 1, amount: nil)
-      token_transfer2 = insert(:token_transfer, transaction: transaction, token: token, token_id: 2, amount: nil)
-      token_transfer3 = insert(:token_transfer, transaction: transaction, token: token, token_id: 3, amount: nil)
+      token_transfer1 = insert(:token_transfer, transaction: transaction, token: token, token_ids: [1], amount: nil)
+      token_transfer2 = insert(:token_transfer, transaction: transaction, token: token, token_ids: [2], amount: nil)
+      token_transfer3 = insert(:token_transfer, transaction: transaction, token: token, token_ids: [3], amount: nil)
 
       result = TransactionView.aggregate_token_transfers([token_transfer1, token_transfer2, token_transfer3])
 
